@@ -1,0 +1,43 @@
+name: Gerar APK
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar arquivos do repositório
+        uses: actions/checkout@v4
+
+      - name: Descompactar o projeto
+        run: |
+          unzip -o *.zip -d _proj
+          DIR=$(find _proj -maxdepth 3 -name settings.gradle -printf '%h\n' | head -1)
+          echo "PROJ=$DIR" >> "$GITHUB_ENV"
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar componentes do SDK
+        run: yes | sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
+
+      - name: Compilar o APK
+        working-directory: ${{ env.PROJ }}
+        run: |
+          chmod +x ./gradlew || true
+          ./gradlew assembleDebug --no-daemon || gradle assembleDebug --no-daemon
+
+      - name: Publicar o APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MinhaRotina-apk
+          path: ${{ env.PROJ }}/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
