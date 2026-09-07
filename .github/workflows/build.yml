@@ -17,6 +17,12 @@ jobs:
           DIR=$(find _proj -maxdepth 3 -name settings.gradle -printf '%h\n' | head -1)
           echo "PROJ=$DIR" >> "$GITHUB_ENV"
 
+      - name: Ajustar dependencias (corrige conflito do Kotlin)
+        run: |
+          sed -i "s|dependencies {|dependencies {\n    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.9.22')|" "$PROJ/app/build.gradle"
+          echo '----- app/build.gradle -----'
+          cat "$PROJ/app/build.gradle"
+
       - name: Instalar Java 17
         uses: actions/setup-java@v4
         with:
