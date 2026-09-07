@@ -11,16 +11,23 @@ jobs:
       - name: Baixar arquivos do repositório
         uses: actions/checkout@v4
 
-      - name: Descompactar o projeto
+      - name: Descompactar o projeto (sempre o ZIP mais novo)
         run: |
-          unzip -o *.zip -d _proj
+          rm -rf _proj
+          ZIP=$(ls -t *.zip | head -1)
+          echo "Usando o ZIP: $ZIP"
+          unzip -o "$ZIP" -d _proj
           DIR=$(find _proj -maxdepth 3 -name settings.gradle -printf '%h\n' | head -1)
           echo "PROJ=$DIR" >> "$GITHUB_ENV"
+          echo "Versão do app empacotado:"
+          grep -o 'id=\"appVersion\">[^<]*' "$DIR/app/src/main/assets/index.html" || true
+          grep -n 'versionName' "$DIR/app/build.gradle" || true
 
       - name: Ajustar dependencias (corrige conflito do Kotlin)
         run: |
-          sed -i "s|dependencies {|dependencies {\n    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.9.22')|" "$PROJ/app/build.gradle"
-          echo '----- app/build.gradle -----'
+          if ! grep -q "kotlin-bom" "$PROJ/app/build.gradle"; then
+            sed -i "s|dependencies {|dependencies {\n    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.9.22')|" "$PROJ/app/build.gradle"
+          fi
           cat "$PROJ/app/build.gradle"
 
       - name: Instalar Java 17
